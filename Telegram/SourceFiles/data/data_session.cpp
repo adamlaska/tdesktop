@@ -5312,6 +5312,7 @@ void Session::insertCheckedServiceNotification(
 				MTPMessageFwdHeader(),
 				MTPlong(), // via_bot_id
 				MTPlong(), // via_business_bot_id
+				MTPPeer(), // guestchat_via_from
 				MTPMessageReplyHeader(),
 				MTP_int(date),
 				MTP_string(sending.text),
