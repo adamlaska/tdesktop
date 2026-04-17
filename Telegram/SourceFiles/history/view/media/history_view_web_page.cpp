@@ -16,7 +16,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/click_handler_types.h"
 #include "core/ui_integration.h"
 #include "data/components/sponsored_messages.h"
-#include "data/stickers/data_custom_emoji.h"
 #include "data/data_file_click_handler.h"
 #include "data/data_photo_media.h"
 #include "data/data_session.h"
@@ -233,6 +232,8 @@ constexpr auto kSponsoredUserpicLines = 2;
 		? tr::lng_view_button_emojipack(tr::now)
 		: (type == WebPageType::StickerSet)
 		? tr::lng_view_button_stickerset(tr::now)
+		: (type == WebPageType::ComposeAiTone)
+		? tr::lng_view_button_style(tr::now)
 		: (type == WebPageType::StoryAlbum)
 		? tr::lng_view_button_storyalbum(tr::now)
 		: (type == WebPageType::GiftCollection)
@@ -286,6 +287,7 @@ constexpr auto kSponsoredUserpicLines = 2;
 		|| (type == WebPageType::StickerSet)
 		|| (type == WebPageType::StoryAlbum)
 		|| (type == WebPageType::GiftCollection)
+		|| (type == WebPageType::ComposeAiTone)
 		|| (type == WebPageType::Auction)
 		|| (type == WebPageType::NewBot);
 }
@@ -379,9 +381,52 @@ void WebPage::setupAdditionalData() {
 			view->setWebpagePart();
 			view->initSize(single);
 		}
+	} else if (_data->type == WebPageType::ComposeAiTone
+			&& _data->composeToneEmojiId) {
+		if (const auto existing = composeToneData()
+			; existing && existing->view) {
+		} else {
+			_additionalData = std::make_unique<AdditionalData>(
+				ComposeToneData());
+			const auto raw = composeToneData();
+			const auto session = &_data->session();
+			const auto box = UnitedLineHeight() * kStickerSetLines;
+			const auto id = _data->composeToneEmojiId;
+			auto &manager = session->data().customEmojiManager();
+			const auto document = session->data().document(id).get();
+			if (document->sticker()) {
+				raw->view = std::make_unique<Sticker>(
+					_parent,
+					document,
+					true);
+				raw->view->setWebpagePart();
+				raw->view->initSize(box);
+			} else {
+				manager.resolve(id, this);
+				_composeToneListening = 1;
+			}
+		}
 	} else if (_data->type == WebPageType::Factcheck) {
 		_additionalData = std::make_unique<AdditionalData>(FactcheckData());
 	}
+}
+
+void WebPage::customEmojiResolveDone(not_null<DocumentData*> document) {
+	if (!document->sticker()) {
+		return;
+	}
+	const auto raw = composeToneData();
+	if (!raw) {
+		return;
+	}
+	if (_data->composeToneEmojiId != document->id) {
+		return;
+	}
+	const auto box = UnitedLineHeight() * kStickerSetLines;
+	raw->view = std::make_unique<Sticker>(_parent, document, true);
+	raw->view->setWebpagePart();
+	raw->view->initSize(box);
+	history()->owner().requestViewResize(_parent);
 }
 
 QSize WebPage::countOptimalSize() {
@@ -393,7 +438,9 @@ QSize WebPage::countOptimalSize() {
 	const auto sponsored = sponsoredData();
 	const auto factcheck = factcheckData();
 	const auto stickerSet = stickerSetData();
+	const auto composeTone = composeToneData();
 	const auto specialRightPix = (stickerSet
+		|| composeTone
 		|| (sponsored && !sponsored->hasMedia && _data->photo));
 
 	// Detect _openButtonWidth before counting paddings.
@@ -651,7 +698,7 @@ QSize WebPage::countOptimalSize() {
 		: specialRightPix
 		? (st::webPagePhotoDelta
 			+ (lineHeight
-				* (stickerSet
+				* ((stickerSet || composeTone)
 					? kStickerSetLines
 					: kSponsoredUserpicLines)))
 		: 0;
@@ -731,9 +778,11 @@ QSize WebPage::countCurrentSize(int newWidth) {
 	auto newHeight = 0;
 
 	const auto stickerSet = stickerSetData();
+	const auto composeTone = composeToneData();
 	const auto factcheck = factcheckData();
 	const auto sponsored = sponsoredData();
 	const auto specialRightPix = (stickerSet
+		|| composeTone
 		|| (sponsored && !sponsored->hasMedia && _data->photo));
 	const auto lineHeight = UnitedLineHeight();
 	const auto factcheckMetrics = factcheck
@@ -756,7 +805,7 @@ QSize WebPage::countCurrentSize(int newWidth) {
 	const auto descriptionLineHeight = st::webPageDescriptionFont->height;
 	if (asArticle() || specialRightPix) {
 		_pixh = lineHeight
-			* (stickerSet
+			* ((stickerSet || composeTone)
 				? kStickerSetLines
 				: specialRightPix
 				? kSponsoredUserpicLines
@@ -894,6 +943,11 @@ bool WebPage::hasHeavyPart() const {
 			}
 		}
 	}
+	if (const auto composeTone = composeToneData()) {
+		if (composeTone->view && composeTone->view->hasHeavyPart()) {
+			return true;
+		}
+	}
 	return _photoMedia
 		|| (_attach ? _attach->hasHeavyPart() : false);
 }
@@ -907,6 +961,11 @@ void WebPage::unloadHeavyPart() {
 	if (const auto stickerSet = stickerSetData()) {
 		for (const auto &part : stickerSet->views) {
 			part->unloadHeavyPart();
+		}
+	}
+	if (const auto composeTone = composeToneData()) {
+		if (composeTone->view) {
+			composeTone->view->unloadHeavyPart();
 		}
 	}
 }
@@ -1034,6 +1093,21 @@ void WebPage::draw(Painter &p, const PaintContext &context) const {
 				const auto y = i * single + offsetY;
 				view->draw(p, context, QRect(QPoint(x, y) + topLeft, size));
 			}
+		}
+		paintw -= box;
+	} else if (const auto composeTone = composeToneData()) {
+		const auto box = _pixh;
+		const auto topLeft = QPoint(inner.left() + paintw - box, tshift);
+		if (composeTone->view) {
+			const auto size = composeTone->view->countOptimalSize();
+			const auto offsetX = (box - size.width()) / 2.;
+			const auto offsetY = (box - size.height()) / 2.;
+			composeTone->view->draw(
+				p,
+				context,
+				QRect(
+					QPoint(int(offsetX), int(offsetY)) + topLeft,
+					size));
 		}
 		paintw -= box;
 	} else if (asArticle()) {
@@ -1327,6 +1401,10 @@ bool WebPage::asArticle() const {
 
 WebPage::StickerSetData *WebPage::stickerSetData() const {
 	return std::get_if<StickerSetData>(_additionalData.get());
+}
+
+WebPage::ComposeToneData *WebPage::composeToneData() const {
+	return std::get_if<ComposeToneData>(_additionalData.get());
 }
 
 WebPage::SponsoredData *WebPage::sponsoredData() const {
@@ -1751,6 +1829,10 @@ int WebPage::bottomInfoPadding() const {
 
 WebPage::~WebPage() {
 	history()->owner().unregisterWebPageView(_data, _parent);
+	if (_composeToneListening) {
+		_data->session().data().customEmojiManager().unregisterListener(
+			this);
+	}
 	if (_photoMedia) {
 		history()->owner().keepAlive(base::take(_photoMedia));
 		_parent->checkHeavyPart();

@@ -1345,7 +1345,7 @@ aiTonePreviewTitleMargin: margins(16px, 6px, 16px, 0px);
 
 aiTonePreviewAboutLabel: FlatLabel(defaultFlatLabel) {
 	textFg: windowSubTextFg;
-	minWidth: 0px;
+	minWidth: 20px;
 	align: align(top);
 	style: TextStyle(defaultTextStyle) {
 		font: font(14px);
@@ -1382,7 +1382,7 @@ aiTonePreviewExampleSectionTitle: FlatLabel(defaultSubsectionTitle) {
 }
 aiTonePreviewExampleBody: FlatLabel(defaultFlatLabel) {
 	textFg: windowFg;
-	minWidth: 0px;
+	minWidth: 80px;
 	style: defaultTextStyle;
 }
 aiTonePreviewExampleSectionSpacing: 6px;

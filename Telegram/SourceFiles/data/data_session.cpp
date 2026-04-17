@@ -3890,6 +3890,7 @@ not_null<WebPageData*> Session::processWebpage(
 		nullptr,
 		nullptr,
 		0,
+		0,
 		QString(),
 		false,
 		false,
@@ -3960,6 +3961,7 @@ not_null<WebPageData*> Session::webpage(
 		std::move(stickerSet),
 		std::move(uniqueGift),
 		nullptr,
+		0,
 		duration,
 		author,
 		hasLargeMedia,
@@ -4089,6 +4091,21 @@ void Session::webpageApplyFields(
 		return nullptr;
 	};
 
+	const auto lookupComposeToneEmojiId = [&]() -> DocumentId {
+		if (const auto attributes = data.vattributes()) {
+			for (const auto &attribute : attributes->v) {
+				const auto result = attribute.match([&](
+						const MTPDwebPageAttributeAiComposeTone &data) {
+					return DocumentId(data.vemoji_id().v);
+				}, [](const auto &) { return DocumentId(0); });
+				if (result) {
+					return result;
+				}
+			}
+		}
+		return 0;
+	};
+
 	auto story = (Data::Story*)nullptr;
 	auto storyId = FullStoryId();
 	if (const auto attributes = data.vattributes()) {
@@ -4183,6 +4200,7 @@ void Session::webpageApplyFields(
 		lookupStickerSet(),
 		lookupUniqueGift(),
 		lookupAuction(),
+		lookupComposeToneEmojiId(),
 		data.vduration().value_or_empty(),
 		qs(data.vauthor().value_or_empty()),
 		data.is_has_large_media(),
@@ -4206,6 +4224,7 @@ void Session::webpageApplyFields(
 		std::unique_ptr<WebPageStickerSet> stickerSet,
 		std::shared_ptr<UniqueGift> uniqueGift,
 		std::unique_ptr<WebPageAuction> auction,
+		DocumentId composeToneEmojiId,
 		int duration,
 		const QString &author,
 		bool hasLargeMedia,
@@ -4227,6 +4246,7 @@ void Session::webpageApplyFields(
 		std::move(stickerSet),
 		std::move(uniqueGift),
 		std::move(auction),
+		composeToneEmojiId,
 		duration,
 		author,
 		hasLargeMedia,

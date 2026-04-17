@@ -7227,6 +7227,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_view_button_iv" = "Instant View";
 "lng_view_button_stickerset" = "View stickers";
 "lng_view_button_emojipack" = "View emoji";
+"lng_view_button_style" = "View Style";
 "lng_view_button_collectible" = "View collectible";
 "lng_view_button_call" = "Join call";
 "lng_view_button_storyalbum" = "View Album";
@@ -7889,7 +7890,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_ai_compose_tone_created_description" = "Right click the style to edit or share the link.";
 "lng_ai_compose_tone_preview_about" = "Add this style to instantly rewrite your messages.";
 "lng_ai_compose_tone_preview_add" = "Add Style";
-"lng_ai_compose_tone_preview_add_example" = "Add another example";
+"lng_ai_compose_tone_preview_add_example" = "Another example";
 "lng_ai_compose_tone_preview_used_by#one" = "Used by {count} person.";
 "lng_ai_compose_tone_preview_used_by#other" = "Used by {count} people.";
 "lng_ai_compose_tone_preview_created_by" = "Created by {user}";

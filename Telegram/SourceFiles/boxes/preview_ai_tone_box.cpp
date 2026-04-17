@@ -24,7 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/labels.h"
 #include "ui/wrap/vertical_layout.h"
-
+#include "ui/vertical_list.h"
 #include "styles/style_boxes.h"
 #include "styles/style_layers.h"
 
@@ -36,7 +36,8 @@ class PreviewAiToneExampleCard final : public Ui::RpWidget {
 public:
 	explicit PreviewAiToneExampleCard(QWidget *parent);
 
-	void addExample(Data::AiComposeToneExample example);
+	void showExample(Data::AiComposeToneExample example);
+	[[nodiscard]] rpl::producer<> anotherExampleRequested() const;
 
 protected:
 	int resizeGetHeight(int newWidth) override;
@@ -48,11 +49,13 @@ private:
 		not_null<Ui::FlatLabel*> originalBody;
 		not_null<Ui::FlatLabel*> resultTitle;
 		not_null<Ui::FlatLabel*> resultBody;
+		not_null<Ui::LinkButton*> link;
 		int innerDividerY = 0;
 	};
 
 	std::vector<Pair> _pairs;
 	std::vector<int> _pairSeparatorYs;
+	rpl::event_stream<> _anotherExampleRequested;
 
 };
 
@@ -60,12 +63,27 @@ PreviewAiToneExampleCard::PreviewAiToneExampleCard(QWidget *parent)
 : RpWidget(parent) {
 }
 
-void PreviewAiToneExampleCard::addExample(
+void PreviewAiToneExampleCard::showExample(
 		Data::AiComposeToneExample example) {
 	const auto originalTitle = Ui::CreateChild<Ui::FlatLabel>(
 		this,
 		tr::lng_ai_compose_original(tr::now),
 		st::aiTonePreviewExampleSectionTitle);
+	const auto link = Ui::CreateChild<Ui::LinkButton>(
+		this,
+		tr::lng_ai_compose_tone_preview_add_example(tr::now),
+		st::defaultLinkButton);
+	rpl::combine(
+		this->widthValue(),
+		originalTitle->geometryValue(),
+		link->widthValue()
+	) | rpl::on_next([=](int width, QRect titleGeometry, int linkWidth) {
+		const auto right = st::aiTonePreviewExampleCardPadding.left();
+		link->moveToRight(right, titleGeometry.top(), width);
+	}, lifetime());
+	link->clicks()
+		| rpl::to_empty
+		| rpl::start_to_stream(_anotherExampleRequested, link->lifetime());
 	const auto originalBody = Ui::CreateChild<Ui::FlatLabel>(
 		this,
 		example.from,
@@ -84,15 +102,28 @@ void PreviewAiToneExampleCard::addExample(
 	originalBody->show();
 	resultTitle->show();
 	resultBody->show();
+	link->show();
+	for (const auto &pair : base::take(_pairs)) {
+		delete pair.originalTitle;
+		delete pair.originalBody;
+		delete pair.resultTitle;
+		delete pair.resultBody;
+		delete pair.link;
+	}
 	_pairs.push_back(Pair{
 		.originalTitle = originalTitle,
 		.originalBody = originalBody,
 		.resultTitle = resultTitle,
 		.resultBody = resultBody,
+		.link = link,
 	});
 	if (width() > 0) {
 		resizeToWidth(width());
 	}
+}
+
+rpl::producer<> PreviewAiToneExampleCard::anotherExampleRequested() const {
+	return _anotherExampleRequested.events();
 }
 
 int PreviewAiToneExampleCard::resizeGetHeight(int newWidth) {
@@ -195,6 +226,7 @@ void PreviewAiToneBox(
 
 	const auto top = box->setPinnedToTopContent(
 		object_ptr<Ui::VerticalLayout>(box));
+	Ui::AddSkip(top, st::defaultVerticalListSkip * 2);
 	AddAiToneIconPreview(top, session, rpl::single(tone.emojiId), nullptr);
 	top->add(
 		object_ptr<Ui::FlatLabel>(
@@ -224,19 +256,7 @@ void PreviewAiToneBox(
 	const auto card = body->add(
 		object_ptr<PreviewAiToneExampleCard>(body),
 		st::aiTonePreviewExampleCardMargin);
-	if (tone.firstExample) {
-		card->addExample(*tone.firstExample);
-	}
-
-	const auto addMore = body->add(
-		object_ptr<Ui::LinkButton>(
-			body,
-			tr::lng_ai_compose_tone_preview_add_example(tr::now),
-			st::defaultLinkButton),
-		st::aiTonePreviewAddExampleMargin,
-		style::al_top);
-
-	const auto onAddExample = [=] {
+	const auto loadAnother = [=] {
 		if (state->requesting) {
 			return;
 		}
@@ -248,17 +268,20 @@ void PreviewAiToneBox(
 			crl::guard(box, [=](Data::AiComposeToneExample example) {
 				state->requesting = false;
 				++state->examplesCount;
-				card->addExample(std::move(example));
+				card->showExample(std::move(example));
 			}),
 			crl::guard(box, [=](const MTP::Error &) {
 				state->requesting = false;
 				box->showToast(tr::lng_ai_compose_error(tr::now));
 			}));
 	};
-	addMore->setClickedCallback(onAddExample);
+	card->anotherExampleRequested(
+	) | rpl::on_next(loadAnother, card->lifetime());
 
-	if (!tone.firstExample) {
-		onAddExample();
+	if (tone.firstExample) {
+		card->showExample(*tone.firstExample);
+	} else {
+		loadAnother();
 	}
 
 	const auto attribution = body->add(

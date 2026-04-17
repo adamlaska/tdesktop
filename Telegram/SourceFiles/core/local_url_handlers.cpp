@@ -1694,7 +1694,7 @@ const std::vector<LocalUrlHandler> &LocalUrlHandlers() {
 			ShowTheme
 		},
 		{
-			u"^aistyle/?\\?slug=([a-zA-Z0-9\\.\\_]+)(&|$)"_q,
+			u"^addstyle/?\\?slug=([a-zA-Z0-9\\.\\_]+)(&|$)"_q,
 			ShowAiStyle
 		},
 		{
@@ -1914,8 +1914,8 @@ QString TryConvertUrlToLocal(QString url) {
 			return u"tg://"_q + stickerSetMatch->captured(1) + "?set=" + url_encode(stickerSetMatch->captured(2));
 		} else if (const auto themeMatch = regex_match(u"^addtheme/([a-zA-Z0-9\\.\\_]+)(\\?|$)"_q, query, matchOptions)) {
 			return u"tg://addtheme?slug="_q + url_encode(themeMatch->captured(1));
-		} else if (const auto aiStyleMatch = regex_match(u"^aistyle/([a-zA-Z0-9\\.\\_]+)(\\?|$)"_q, query, matchOptions)) {
-			return u"tg://aistyle?slug="_q + url_encode(aiStyleMatch->captured(1));
+		} else if (const auto addStyleMatch = regex_match(u"^addstyle/([a-zA-Z0-9\\.\\_]+)(\\?|$)"_q, query, matchOptions)) {
+			return u"tg://addstyle?slug="_q + url_encode(addStyleMatch->captured(1));
 		} else if (const auto languageMatch = regex_match(u"^setlanguage/([a-zA-Z0-9\\.\\_\\-]+)(\\?|$)"_q, query, matchOptions)) {
 			return u"tg://setlanguage?lang="_q + url_encode(languageMatch->captured(1));
 		} else if (const auto shareUrlMatch = regex_match(u"^share/url/?\\?(.+)$"_q, query, matchOptions)) {
