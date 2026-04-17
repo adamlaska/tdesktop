@@ -31,6 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/gift_premium_box.h"
 #include "boxes/edit_privacy_box.h"
 #include "boxes/premium_preview_box.h"
+#include "boxes/preview_ai_tone_box.h"
 #include "boxes/sticker_set_box.h"
 #include "boxes/star_gift_box.h"
 #include "boxes/language_box.h"
@@ -311,21 +312,10 @@ bool ShowAiStyle(
 		if (!strong) {
 			return;
 		}
-		strong->window().show(Ui::MakeConfirmBox({
-			.text = tr::lng_ai_compose_tone_save_sure(
-				tr::now,
-				lt_title,
-				tone.title),
-			.confirmed = [=](Fn<void()> &&close) {
-				close();
-				strong->session().data().aiComposeTones().save(
-					tone,
-					false);
-				strong->window().showToast(
-					tr::lng_ai_compose_tone_saved(tr::now));
-			},
-			.confirmText = tr::lng_ai_compose_tone_save(),
-		}));
+		strong->window().show(Box(
+			PreviewAiToneBox,
+			&strong->session(),
+			std::move(tone)));
 	}, [=](const MTP::Error &error) {
 		const auto strong = weak.get();
 		if (!strong) {

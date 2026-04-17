@@ -7878,8 +7878,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_ai_compose_tone_share" = "Share Style";
 "lng_ai_compose_tone_delete" = "Delete Style";
 "lng_ai_compose_tone_delete_sure" = "Are you sure you want to delete this style? It will be removed for everyone who installed it.";
-"lng_ai_compose_tone_save_sure" = "Do you want to save the style {title}?";
-"lng_ai_compose_tone_saved" = "Style saved.";
 "lng_ai_compose_tone_link_copied" = "Style link copied.";
 "lng_ai_compose_author" = "Style by {user}";
 "lng_ai_compose_tone_warn_icon" = "Please choose an icon.";
@@ -7888,6 +7886,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_ai_compose_tone_created" = "{title} Style Created!";
 "lng_ai_compose_tone_updated" = "{title} Style Updated!";
 "lng_ai_compose_tone_created_description" = "Right click the style to edit or share the link.";
+"lng_ai_compose_tone_preview_about" = "Add this style to instantly rewrite your messages.";
+"lng_ai_compose_tone_preview_add" = "Add Style";
+"lng_ai_compose_tone_preview_add_example" = "Add another example";
+"lng_ai_compose_tone_preview_used_by#one" = "Used by {count} person.";
+"lng_ai_compose_tone_preview_used_by#other" = "Used by {count} people.";
+"lng_ai_compose_tone_preview_created_by" = "Created by {user}";
+"lng_ai_compose_tone_added" = "Style Added";
+"lng_ai_compose_tone_added_description" = "Tap \"AI\" → \"{name}\" when typing your next long message.";
 
 "lng_send_as_file_tooltip" = "Send text as a file.";
 
