@@ -1245,10 +1245,7 @@ bool OverlayWidget::videoShown() const {
 QSize OverlayWidget::videoSize() const {
 	Expects(videoShown());
 
-	const auto use = (_document && _chosenQuality != _document)
-		? _document->dimensions
-		: _streamed->instance.info().video.size;
-	return flipSizeByRotation(use);
+	return flipSizeByRotation(_streamed->instance.info().video.size);
 }
 
 bool OverlayWidget::streamingRequiresControls() const {
@@ -5221,7 +5218,7 @@ float64 OverlayWidget::playbackControlsCurrentSpeed(bool lastNonDefault) {
 	return Core::App().settings().videoPlaybackSpeed(lastNonDefault);
 }
 
-std::vector<int> OverlayWidget::playbackControlsQualities() {
+std::vector<QualityChoice> OverlayWidget::playbackControlsQualities() {
 	if (!_document) {
 		return {};
 	}
@@ -5229,10 +5226,13 @@ std::vector<int> OverlayWidget::playbackControlsQualities() {
 	if (list.empty()) {
 		return {};
 	}
-	auto result = std::vector<int>();
+	auto result = std::vector<QualityChoice>();
 	result.reserve(list.size());
 	for (const auto &quality : list) {
-		result.push_back(quality->resolveVideoQuality());
+		result.push_back({
+			.height = quality->resolveVideoQuality(),
+			.isOriginal = (quality == _document),
+		});
 	}
 	return result;
 }
@@ -5246,7 +5246,16 @@ VideoQuality OverlayWidget::playbackControlsCurrentQuality() {
 		: _quality;
 }
 
-void OverlayWidget::playbackControlsQualityChanged(int quality) {
+void OverlayWidget::playbackControlsQualityChanged(
+		int quality,
+		bool isOriginal) {
+	if (isOriginal && _document) {
+		applyVideoQualityToDocument(_document, {
+			.manual = 1,
+			.height = uint32(quality ? quality : _quality.height),
+		});
+		return;
+	}
 	applyVideoQuality({
 		.manual = (quality > 0),
 		.height = quality ? uint32(quality) : _quality.height,
@@ -5257,14 +5266,26 @@ void OverlayWidget::applyVideoQuality(VideoQuality value) {
 	if (_quality == value) {
 		return;
 	}
+	if (!_document) {
+		_quality = value;
+		Core::App().settings().setVideoQuality(value);
+		Core::App().saveSettingsDelayed();
+		return;
+	}
+	const auto resolved = _document->chooseQuality(_message, value);
+	applyVideoQualityToDocument(resolved, value);
+}
+
+void OverlayWidget::applyVideoQualityToDocument(
+		not_null<DocumentData*> resolved,
+		VideoQuality value) {
+	if (_quality == value && _chosenQuality == resolved) {
+		return;
+	}
 	_quality = value;
 	Core::App().settings().setVideoQuality(value);
 	Core::App().saveSettingsDelayed();
 
-	if (!_document) {
-		return;
-	}
-	const auto resolved = _document->chooseQuality(_message, _quality);
 	if (_chosenQuality == resolved) {
 		return;
 	}

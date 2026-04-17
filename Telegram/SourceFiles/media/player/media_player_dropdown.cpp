@@ -719,9 +719,9 @@ SpeedController::SpeedController(
 	Fn<void(bool)> menuOverCallback,
 	Fn<float64(bool lastNonDefault)> value,
 	Fn<void(float64)> change,
-	std::vector<int> qualities,
+	std::vector<QualityChoice> qualities,
 	Fn<VideoQuality()> quality,
-	Fn<void(int)> changeQuality)
+	Fn<void(int, bool)> changeQuality)
 : WithDropdownController(
 	button,
 	menuParent,
@@ -800,11 +800,6 @@ void SpeedController::save() {
 	_saved.fire({});
 }
 
-void SpeedController::setQuality(VideoQuality quality) {
-	_quality = quality;
-	_changeQuality(quality.manual ? quality.height : 0);
-}
-
 void SpeedController::fillMenu(not_null<Ui::DropdownMenu*> menu) {
 	if (_lookup) {
 		FillSpeedMenu(
@@ -824,16 +819,29 @@ void SpeedController::fillMenu(not_null<Ui::DropdownMenu*> menu) {
 		raw->addSeparator(&st.dropdown.menu.separator);
 	}
 
-	const auto add = [&](int quality) {
+	const auto add = [&](QualityChoice choice) {
+		const auto isAuto = !choice.height && !choice.isOriginal;
 		const auto automatic = tr::lng_mediaview_quality_auto(tr::now);
-		const auto text = quality ? u"%1p"_q.arg(quality) : automatic;
+		const auto original = tr::lng_mediaview_quality_original(tr::now);
+		const auto height = choice.height;
+		const auto isOriginal = choice.isOriginal;
+		const auto text = [&] {
+			if (isAuto) {
+				return automatic;
+			} else if (!isOriginal) {
+				return u"%1p"_q.arg(height);
+			} else if (height) {
+				return original + u"\t%1p"_q.arg(height);
+			}
+			return original;
+		}();
 		auto action = base::make_unique_q<Ui::Menu::Action>(
 			raw,
 			st.qualityMenu,
 			Ui::Menu::CreateAction(
 				raw,
 				text,
-				[=] { _changeQuality(quality); }),
+				[=] { _changeQuality(height, isOriginal); }),
 			nullptr,
 			nullptr);
 		const auto raw = action.get();
@@ -854,11 +862,11 @@ void SpeedController::fillMenu(not_null<Ui::DropdownMenu*> menu) {
 		check->setAttribute(Qt::WA_TransparentForMouseEvents);
 		_quality.value(
 		) | rpl::on_next([=](VideoQuality now) {
-			const auto chosen = now.manual
-				? (now.height == quality)
-				: !quality;
+			const auto chosen = isAuto
+				? !now.manual
+				: (now.manual && now.height == height);
 			raw->action()->setEnabled(!chosen);
-			if (!quality) {
+			if (isAuto) {
 				raw->action()->setText(automatic
 					+ (now.manual ? QString() : u"\t%1p"_q.arg(now.height)));
 			}
@@ -867,8 +875,8 @@ void SpeedController::fillMenu(not_null<Ui::DropdownMenu*> menu) {
 		menu->addAction(std::move(action));
 	};
 
-	add(0);
-	for (const auto quality : _qualities) {
+	add({});
+	for (const auto &quality : _qualities) {
 		add(quality);
 	}
 }

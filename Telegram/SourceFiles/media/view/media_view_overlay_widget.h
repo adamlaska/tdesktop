@@ -241,9 +241,11 @@ private:
 	void playbackControlsVolumeChangeFinished() override;
 	void playbackControlsSpeedChanged(float64 speed) override;
 	float64 playbackControlsCurrentSpeed(bool lastNonDefault) override;
-	std::vector<int> playbackControlsQualities() override;
+	std::vector<QualityChoice> playbackControlsQualities() override;
 	VideoQuality playbackControlsCurrentQuality() override;
-	void playbackControlsQualityChanged(int quality) override;
+	void playbackControlsQualityChanged(
+		int quality,
+		bool isOriginal) override;
 	void playbackControlsToFullScreen() override;
 	void playbackControlsFromFullScreen() override;
 	void playbackControlsToPictureInPicture() override;
@@ -570,6 +572,9 @@ private:
 	[[nodiscard]] bool canInitStreaming() const;
 	[[nodiscard]] bool saveControlLocked() const;
 	void applyVideoQuality(VideoQuality value);
+	void applyVideoQualityToDocument(
+		not_null<DocumentData*> resolved,
+		VideoQuality value);
 
 	[[nodiscard]] bool topShadowOnTheRight() const;
 	void applyHideWindowWorkaround();

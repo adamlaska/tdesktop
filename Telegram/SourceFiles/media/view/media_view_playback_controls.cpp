@@ -65,7 +65,9 @@ PlaybackControls::PlaybackControls(
 			: Fn<void(float64)>()),
 		_qualitiesList,
 		[=] { return _delegate->playbackControlsCurrentQuality(); },
-		[=](int quality) { saveQuality(quality); })
+		[=](int quality, bool isOriginal) {
+			saveQuality(quality, isOriginal);
+		})
 	: nullptr)
 , _fadeAnimation(std::make_unique<Ui::FadeAnimation>(this)) {
 	_fadeAnimation->show();
@@ -224,9 +226,9 @@ void PlaybackControls::saveSpeed(float64 speed) {
 	_delegate->playbackControlsSpeedChanged(speed);
 }
 
-void PlaybackControls::saveQuality(int quality) {
+void PlaybackControls::saveQuality(int quality, bool isOriginal) {
 	_speedToggle->setQuality(_qualitiesList.empty() ? 0 : quality);
-	_delegate->playbackControlsQualityChanged(quality);
+	_delegate->playbackControlsQualityChanged(quality, isOriginal);
 }
 
 void PlaybackControls::updateSpeedToggleQuality() {

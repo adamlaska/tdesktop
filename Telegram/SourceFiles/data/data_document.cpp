@@ -577,11 +577,17 @@ void DocumentData::setVideoQualities(
 		--count;
 	}
 	qualities.erase(qualities.begin() + count, qualities.end());
-	if (!qualities.empty()) {
-		if (const auto mine = resolveVideoQuality()) {
-			if (mine > qualities.front()->resolveVideoQuality()) {
-				qualities.insert(begin(qualities), this);
-			}
+	if (!qualities.empty() && resolveVideoQuality()) {
+		const auto already = ranges::contains(
+			qualities,
+			not_null<DocumentData*>(this));
+		if (!already) {
+			const auto where = ranges::lower_bound(
+				qualities,
+				resolveVideoQuality(),
+				ranges::greater(),
+				&DocumentData::resolveVideoQuality);
+			qualities.insert(where, this);
 		}
 	}
 	data->qualities = std::move(qualities);

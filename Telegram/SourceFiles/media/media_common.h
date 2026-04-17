@@ -37,6 +37,15 @@ struct VideoQuality {
 		VideoQuality) = default;
 };
 
+struct QualityChoice {
+	int height = 0;
+	bool isOriginal = false;
+
+	friend inline constexpr bool operator==(
+		QualityChoice,
+		QualityChoice) = default;
+};
+
 inline constexpr auto kSpeedMin = 0.5;
 inline constexpr auto kSpeedMax = 2.5;
 inline constexpr auto kSpedUpDefault = 1.7;
